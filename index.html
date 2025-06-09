@@ -2,21 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AR Box with 3D Arrow Controls</title>
+  <title>AR Box with On-Screen HUD Buttons</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      touch-action: none;
+      font-family: sans-serif;
+    }
+
+    #hud {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 1;
+    }
+
+    button {
+      padding: 12px 16px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.8);
+    }
+  </style>
 </head>
-<body style="margin: 0; overflow: hidden; touch-action: none;">
+<body>
+  <!-- HUD Controls -->
+  <div id="hud" style="display: none;">
+    <button id="left">←</button>
+    <button id="forward">↑</button>
+    <button id="backward">↓</button>
+    <button id="right">→</button>
+    <button id="rotate">⟳</button>
+  </div>
+
   <script type="module">
     import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js';
 
-    let scene, camera, renderer;
+    let camera, scene, renderer;
     let controller, reticle, box;
     let hitTestSource = null;
     let hitTestSourceRequested = false;
     let placed = false;
-    const arrows = [];
 
     const moveStep = 0.05;
     const rotateStep = Math.PI / 12;
@@ -24,41 +58,22 @@
     init();
     animate();
 
-    function createArrowButton(label, x, z, callback) {
-      const geometry = new THREE.PlaneGeometry(0.08, 0.08);
-      const canvas = document.createElement('canvas');
-      canvas.width = 128;
-      canvas.height = 128;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, 128, 128);
-      ctx.fillStyle = 'black';
-      ctx.font = 'bold 80px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, 64, 64);
-      const texture = new THREE.CanvasTexture(canvas);
-
-      const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true });
-      const plane = new THREE.Mesh(geometry, material);
-      plane.position.set(x, 0.1, z);
-      plane.userData.onTap = callback;
-      scene.add(plane);
-      arrows.push(plane);
-    }
-
     function init() {
+      // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.xr.enabled = true;
       document.body.appendChild(renderer.domElement);
 
+      // Scene & Camera
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
       scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
 
+      // AR Button
       document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
 
+      // Reticle
       const geometry = new THREE.RingGeometry(0.07, 0.09, 32).rotateX(-Math.PI / 2);
       const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
       reticle = new THREE.Mesh(geometry, material);
@@ -66,52 +81,29 @@
       reticle.visible = false;
       scene.add(reticle);
 
+      // Controller
       controller = renderer.xr.getController(0);
-      controller.addEventListener('select', onSelect);
-      scene.add(controller);
-    }
+      controller.addEventListener('select', () => {
+        if (!placed && reticle.visible) {
+          box = new THREE.Mesh(
+            new THREE.BoxGeometry(0.1, 0.1, 0.1),
+            new THREE.MeshStandardMaterial({ color: 0x0077ff })
+          );
+          box.position.setFromMatrixPosition(reticle.matrix);
+          scene.add(box);
+          placed = true;
 
-    function onSelect(event) {
-      const session = renderer.xr.getSession();
-      const frame = renderer.xr.getFrame();
-      const refSpace = renderer.xr.getReferenceSpace();
-
-      if (!placed && reticle.visible) {
-        // Place box
-        box = new THREE.Mesh(
-          new THREE.BoxGeometry(0.1, 0.1, 0.1),
-          new THREE.MeshStandardMaterial({ color: 0x0077ff })
-        );
-        box.position.setFromMatrixPosition(reticle.matrix);
-        scene.add(box);
-        placed = true;
-
-        // Add arrow buttons in front of the box
-        const x = box.position.x;
-        const z = box.position.z;
-        const y = box.position.y + 0.05;
-
-        createArrowButton('↑', x, z - 0.15, () => box.position.z -= moveStep);
-        createArrowButton('↓', x, z + 0.15, () => box.position.z += moveStep);
-        createArrowButton('←', x - 0.15, z, () => box.position.x -= moveStep);
-        createArrowButton('→', x + 0.15, z, () => box.position.x += moveStep);
-        createArrowButton('⟳', x, z, () => box.rotation.y += rotateStep);
-      } else {
-        // Check if user tapped any button
-        const tempMatrix = new THREE.Matrix4();
-        tempMatrix.identity().extractRotation(controller.matrixWorld);
-        const raycaster = new THREE.Raycaster();
-        raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-        raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-
-        const intersects = raycaster.intersectObjects(arrows, false);
-        if (intersects.length > 0) {
-          const button = intersects[0].object;
-          if (button.userData.onTap) {
-            button.userData.onTap();
-          }
+          document.getElementById('hud').style.display = 'flex';
         }
-      }
+      });
+      scene.add(controller);
+
+      // HUD Button Events
+      document.getElementById('left').addEventListener('click', () => box && (box.position.x -= moveStep));
+      document.getElementById('right').addEventListener('click', () => box && (box.position.x += moveStep));
+      document.getElementById('forward').addEventListener('click', () => box && (box.position.z -= moveStep));
+      document.getElementById('backward').addEventListener('click', () => box && (box.position.z += moveStep));
+      document.getElementById('rotate').addEventListener('click', () => box && (box.rotation.y += rotateStep));
     }
 
     function animate() {
