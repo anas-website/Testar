@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AR Box with On-Screen HUD Buttons</title>
+  <title>AR Box — Tap to Move</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js"></script>
@@ -11,38 +11,10 @@
       margin: 0;
       overflow: hidden;
       touch-action: none;
-      font-family: sans-serif;
-    }
-
-    #hud {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      z-index: 1;
-    }
-
-    button {
-      padding: 12px 16px;
-      font-size: 18px;
-      border: none;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.8);
     }
   </style>
 </head>
 <body>
-  <!-- HUD Controls -->
-  <div id="hud" style="display: none;">
-    <button id="left">←</button>
-    <button id="forward">↑</button>
-    <button id="backward">↓</button>
-    <button id="right">→</button>
-    <button id="rotate">⟳</button>
-  </div>
-
   <script type="module">
     import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js';
 
@@ -52,28 +24,21 @@
     let hitTestSourceRequested = false;
     let placed = false;
 
-    const moveStep = 0.05;
-    const rotateStep = Math.PI / 12;
-
     init();
     animate();
 
     function init() {
-      // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.xr.enabled = true;
       document.body.appendChild(renderer.domElement);
 
-      // Scene & Camera
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
       scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
 
-      // AR Button
       document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
 
-      // Reticle
       const geometry = new THREE.RingGeometry(0.07, 0.09, 32).rotateX(-Math.PI / 2);
       const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
       reticle = new THREE.Mesh(geometry, material);
@@ -81,7 +46,6 @@
       reticle.visible = false;
       scene.add(reticle);
 
-      // Controller
       controller = renderer.xr.getController(0);
       controller.addEventListener('select', () => {
         if (!placed && reticle.visible) {
@@ -92,18 +56,40 @@
           box.position.setFromMatrixPosition(reticle.matrix);
           scene.add(box);
           placed = true;
-
-          document.getElementById('hud').style.display = 'flex';
         }
       });
       scene.add(controller);
 
-      // HUD Button Events
-      document.getElementById('left').addEventListener('click', () => box && (box.position.x -= moveStep));
-      document.getElementById('right').addEventListener('click', () => box && (box.position.x += moveStep));
-      document.getElementById('forward').addEventListener('click', () => box && (box.position.z -= moveStep));
-      document.getElementById('backward').addEventListener('click', () => box && (box.position.z += moveStep));
-      document.getElementById('rotate').addEventListener('click', () => box && (box.rotation.y += rotateStep));
+      // Touch anywhere to move the box
+      window.addEventListener('touchstart', (event) => {
+        if (!placed || !hitTestSource) return;
+
+        const touch = event.touches[0];
+        const x = (touch.clientX / window.innerWidth) * 2 - 1;
+        const y = -(touch.clientY / window.innerHeight) * 2 + 1;
+
+        const viewerPose = renderer.xr.getFrame()?.getViewerPose(renderer.xr.getReferenceSpace());
+        if (!viewerPose) return;
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera({ x, y }, camera);
+
+        const frame = renderer.xr.getFrame();
+        if (!frame) return;
+
+        const hitResults = frame.getHitTestResults(hitTestSource);
+        if (hitResults.length > 0) {
+          const hit = hitResults[0];
+          const pose = hit.getPose(renderer.xr.getReferenceSpace());
+          if (box && pose) {
+            box.position.set(
+              pose.transform.position.x,
+              pose.transform.position.y,
+              pose.transform.position.z
+            );
+          }
+        }
+      });
     }
 
     function animate() {
