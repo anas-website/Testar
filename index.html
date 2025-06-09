@@ -40,7 +40,7 @@
     </style>
 </head>
 <body>
-    <div id="info">Waiting for AR to start...</div>
+    <div id="info">Point your camera at a surface and tap to place the box</div>
     <button id="arButton">Start AR</button>
 
     <script type="importmap">
@@ -57,12 +57,11 @@
         import { ARButton } from 'three/addons/webxr/ARButton.js';
 
         let camera, scene, renderer;
-        let box;
         let reticle;
+        let box;
         let hitTestSource = null;
         let hitTestSourceRequested = false;
         let infoDiv = document.getElementById('info');
-        let boxPlaced = false;
 
         init();
         animate();
@@ -109,26 +108,10 @@
             const arButton = ARButton.createButton(renderer);
             document.body.appendChild(arButton);
 
-            // Add session start/end handlers
-            renderer.xr.addEventListener('sessionstart', onSessionStart);
-            renderer.xr.addEventListener('sessionend', onSessionEnd);
-
             // Add tap event listener
             window.addEventListener('click', onSelect);
 
             window.addEventListener('resize', onWindowResize);
-        }
-
-        function onSessionStart() {
-            infoDiv.textContent = 'AR Session Started - Point camera at a surface and tap to place box';
-            boxPlaced = false;
-        }
-
-        function onSessionEnd() {
-            infoDiv.textContent = 'AR Session Ended';
-            box.visible = false;
-            reticle.visible = false;
-            boxPlaced = false;
         }
 
         function onWindowResize() {
@@ -138,7 +121,7 @@
         }
 
         function onSelect() {
-            if (reticle.visible && !boxPlaced) {
+            if (reticle.visible) {
                 const position = new THREE.Vector3();
                 const quaternion = new THREE.Quaternion();
                 const scale = new THREE.Vector3(1, 1, 1);
@@ -148,8 +131,6 @@
                 box.position.copy(position);
                 box.quaternion.copy(quaternion);
                 box.visible = true;
-                boxPlaced = true;
-                infoDiv.textContent = 'Box placed!';
             }
         }
 
@@ -177,13 +158,13 @@
                     if (hitTestSourceRequested === true && hitTestSource) {
                         const hitTestResults = frame.getHitTestResults(hitTestSource);
 
-                        if (hitTestResults.length > 0 && !boxPlaced) {
+                        if (hitTestResults.length > 0) {
                             const hit = hitTestResults[0];
                             const pose = hit.getPose(referenceSpace);
 
                             reticle.visible = true;
                             reticle.matrix.fromArray(pose.transform.matrix);
-                        } else if (!boxPlaced) {
+                        } else {
                             reticle.visible = false;
                         }
                     }
