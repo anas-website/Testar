@@ -2,69 +2,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-    <style type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Box AR Viewer</title>
+    <style>
         body {
             margin: 0;
-            background-color: #000;
+            overflow: hidden;
         }
-        canvas {
-            display: block;
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+        }
+        #arButton {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #arButton:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
+    <div id="info">Click the button below to start AR</div>
+    <button id="arButton">Start AR</button>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
     <script type="module">
-        // Import three
-        import * as THREE from 'https://unpkg.com/three/build/three.module.js';
-        // Import the default VRButton
-        import { VRButton } from 'https://unpkg.com/three/examples/jsm/webxr/VRButton.js';
+        import * as THREE from 'three';
+        import { ARButton } from 'three/addons/webxr/ARButton.js';
 
-        // Make a new scene
-        let scene = new THREE.Scene();
-        // Set background color of the scene to gray
-        scene.background = new THREE.Color(0x505050);
+        let camera, scene, renderer;
+        let box;
 
-        // Make a camera. note that far is set to 100, which is better for realworld sized environments
-        let camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 1.6, 3);
-        scene.add(camera);
+        init();
+        animate();
 
-        // Add some lights
-        var light = new THREE.DirectionalLight(0xffffff,0.5);
-        light.position.set(1, 1, 1).normalize();
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0xffffff,0.5))
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
 
-        // Make a red cube
-        let cube = new THREE.Mesh(
-            new THREE.BoxGeometry(1,1,1),
-            new THREE.MeshLambertMaterial({color:'red'})
-        );
-        cube.position.set(0, 1.5, -10);
-        scene.add(cube);
+            // Create camera
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
-        // Make a renderer that fills the screen
-        let renderer = new THREE.WebGLRenderer({antialias: true});
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        // Turn on VR support
-        renderer.xr.enabled = true;
-        // Set animation loop
-        renderer.setAnimationLoop(render);
-        // Add canvas to the page
-        document.body.appendChild(renderer.domElement);
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.xr.enabled = true;
+            document.body.appendChild(renderer.domElement);
 
-        // Add a button to enter/exit vr to the page
-        document.body.appendChild(VRButton.createButton(renderer));
+            // Create 3D box
+            const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0x00ff00,
+                specular: 0x111111,
+                shininess: 30
+            });
+            box = new THREE.Mesh(geometry, material);
+            box.position.set(0, 0, -0.5);
+            scene.add(box);
 
-        // For AR instead, import ARButton at the top
-        //    import { ARButton } from 'https://unpkg.com/three/examples/jsm/webxr/ARButton.js';
-        // then create the button
-        //  document.body.appendChild(ARButton.createButton(renderer));
+            // Add lights
+            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+            light.position.set(0.5, 1, 0.25);
+            scene.add(light);
 
-        // Handle browser resize
-        window.addEventListener('resize', onWindowResize, false);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(0.5, 0.5, 0.5);
+            scene.add(directionalLight);
+
+            // Add AR button
+            document.body.appendChild(ARButton.createButton(renderer));
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+        }
 
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -72,11 +107,14 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        function render(time) {
-            // Rotate the cube
-            cube.rotation.y = time / 1000;
-            // Draw everything
-            renderer.render(scene, camera);
+        function animate() {
+            renderer.setAnimationLoop(function() {
+                if (box) {
+                    box.rotation.x += 0.01;
+                    box.rotation.y += 0.01;
+                }
+                renderer.render(scene, camera);
+            });
         }
     </script>
 </body>
