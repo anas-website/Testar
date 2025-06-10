@@ -86,13 +86,13 @@
           const raycaster = new THREE.Raycaster();
           raycaster.setFromCamera({ x, y }, camera);
           
-          // Find intersection with a virtual plane at the box's current depth
-          const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -box.position.z);
+          // Find intersection with a horizontal plane at the box's current height
+          const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -box.position.y);
           const intersectionPoint = new THREE.Vector3();
           
           if (raycaster.ray.intersectPlane(plane, intersectionPoint)) {
             box.position.x = intersectionPoint.x;
-            box.position.y = intersectionPoint.y;
+            box.position.z = intersectionPoint.z;
           }
         }
 
