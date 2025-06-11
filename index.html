@@ -206,10 +206,23 @@
       arRenderer.xr.setReferenceSpaceType('local');
       arRenderer.xr.enabled = true;
       
-      const sessionInit = { requiredFeatures: ['hit-test'] };
+      const sessionInit = { 
+        requiredFeatures: ['hit-test'],
+        optionalFeatures: ['dom-overlay'],
+        domOverlay: { root: document.body }
+      };
+      
       navigator.xr.requestSession('immersive-ar', sessionInit).then((session) => {
         session.addEventListener('end', exitAR);
         arRenderer.xr.setSession(session);
+        
+        // Initialize hit testing
+        session.requestReferenceSpace('viewer').then((viewerRef) => {
+          session.requestHitTestSource({ space: viewerRef }).then((source) => {
+            hitTestSource = source;
+            hitTestSourceRequested = true;
+          });
+        });
       });
     }
 
@@ -379,21 +392,6 @@
       if (frame) {
         const referenceSpace = arRenderer.xr.getReferenceSpace();
         const session = arRenderer.xr.getSession();
-
-        if (!hitTestSourceRequested) {
-          session.requestReferenceSpace('viewer').then((viewerRef) => {
-            session.requestHitTestSource({ space: viewerRef }).then((source) => {
-              hitTestSource = source;
-            });
-          });
-
-          session.addEventListener('end', () => {
-            hitTestSourceRequested = false;
-            hitTestSource = null;
-          });
-
-          hitTestSourceRequested = true;
-        }
 
         if (hitTestSource) {
           const hitResults = frame.getHitTestResults(hitTestSource);
