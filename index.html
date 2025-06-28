@@ -35,6 +35,13 @@
 
       document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
 
+
+           // Add a simple test box for AR testing
+           const boxGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+      const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      const testBox = new THREE.Mesh(boxGeometry, boxMaterial);
+      testBox.position.set(0, 0, -0.5); // Place it slightly in front of the camera
+      scene.add(testBox);
       // Reticle
       const geometry = new THREE.RingGeometry(0.07, 0.09, 32).rotateX(-Math.PI / 2);
       const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
