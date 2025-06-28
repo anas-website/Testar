@@ -414,24 +414,33 @@
       directionalLight.position.set(0.5, 1, 0.5);
       arScene.add(directionalLight);
 
+      // Add a simple test box for AR testing
+      // const boxGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+      // const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      // const testBox = new THREE.Mesh(boxGeometry, boxMaterial);
+      // testBox.position.set(0, 0, -0.5); // Place it slightly in front of the camera
+      // arScene.add(testBox);
+
       // Reticle for placement
-      const ringGeometry = new THREE.RingGeometry(0.07, 0.09, 32);
-      ringGeometry.rotateX(-Math.PI / 2);
-      const ringMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x00ff00,
-        transparent: true,
-        opacity: 0.8
-      });
+
+
+
+      const ringGeometry = new THREE.RingGeometry(0.07, 0.09, 32).rotateX(-Math.PI / 2);
+  
+      const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00});
       reticle = new THREE.Mesh(ringGeometry, ringMaterial);
-      reticle.matrixAutoUpdate = false;
-      reticle.visible = false;
+     // reticle.matrixAutoUpdate = false;
+      reticle.position.set(0, 0, -0.5);
+      reticle.visible = true;
       arScene.add(reticle);
 
       // AR controller
       controller = arRenderer.xr.getController(0);
+      //placeShelvesInAR();
       controller.addEventListener('select', () => {
         if (!placed && reticle.visible) {
-          placeShelvesInAR();
+          console.log('select (!placed && reticle.visible)');
+         placeShelvesInAR();
         }
       });
       arScene.add(controller);
@@ -515,7 +524,9 @@
     }
 
     function placeShelvesInAR() {
+      
       if (!shelvesGroup) {
+        console.log( 'placeShelvesInAR()');
         // Create a new group for the shelves in AR
         shelvesGroup = new THREE.Group();
         
@@ -568,6 +579,9 @@
           if (i + 1 < shelves) currentY += height + distances[i + 1];
         }
       }
+      //setFromMatrixPosition
+      console.log('eticle.matrix')
+      console.log(reticle.matrix)
       
       shelvesGroup.position.setFromMatrixPosition(reticle.matrix);
       arScene.add(shelvesGroup);
@@ -689,7 +703,8 @@
               reticle.matrix.fromArray(pose.transform.matrix);
             }
           } else {
-            reticle.visible = false;
+           reticle.visible = false;
+           
           }
         }
       }
