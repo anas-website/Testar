@@ -235,7 +235,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>3Ddd Shelves Designer with AR</h1>
+      <h1>3D Shelves Designer with AR</h1>
       <p class="subtitle">Design custom shelves in 3D and visualize them in your space using Augmented Reality</p>
     </header>
     
@@ -415,11 +415,11 @@
       arScene.add(directionalLight);
 
       // Add a simple test box for AR testing
-      // const boxGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-      // const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-      // const testBox = new THREE.Mesh(boxGeometry, boxMaterial);
-      // testBox.position.set(0, 0, -0.5); // Place it slightly in front of the camera
-      // arScene.add(testBox);
+      const boxGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+      const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      const testBox = new THREE.Mesh(boxGeometry, boxMaterial);
+      testBox.position.set(0, 0, -0.5); // Place it slightly in front of the camera
+      arScene.add(testBox);
 
       // Reticle for placement
 
