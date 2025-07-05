@@ -15,7 +15,7 @@
     }
     
     body {
-      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+      background: linear-gradient(135deg, #1a1a1a, #2d2d2d, #1a1a1a);
       color: #fff;
       min-height: 100vh;
       overflow-x: hidden;
@@ -31,9 +31,9 @@
       text-align: center;
       padding: 20px 0;
       margin-bottom: 30px;
-      background: rgba(0, 0, 0, 0.3);
+      background: rgba(0, 0, 0, 0.5);
       border-radius: 15px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
@@ -61,10 +61,10 @@
     .design-panel {
       flex: 1;
       min-width: 300px;
-      background: rgba(0, 0, 0, 0.3);
+      background: rgba(0, 0, 0, 0.5);
       padding: 25px;
       border-radius: 15px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
@@ -98,7 +98,7 @@
       padding: 12px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.2);
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.3);
       color: white;
       font-size: 1rem;
     }
@@ -108,7 +108,7 @@
     }
     
     button {
-      background: linear-gradient(45deg, #2193b0, #6dd5ed);
+      background: linear-gradient(45deg, #666666, #999999);
       color: white;
       border: none;
       padding: 12px 25px;
@@ -119,32 +119,32 @@
       transition: all 0.3s ease;
       width: 100%;
       margin-top: 10px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
     
     button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-      background: linear-gradient(45deg, #1d7e98, #5bc2e2);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      background: linear-gradient(45deg, #555555, #888888);
     }
     
     #ar-button {
-      background: linear-gradient(45deg, #ff416c, #ff4b2b);
+      background: linear-gradient(45deg, #444444, #666666);
     }
     
     #ar-button:hover {
-      background: linear-gradient(45deg, #e03a5f, #e04429);
+      background: linear-gradient(45deg, #333333, #555555);
     }
     
     .viewer {
       flex: 2;
       min-width: 500px;
       height: 500px;
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.3);
       border-radius: 15px;
       overflow: hidden;
       position: relative;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     }
     
     canvas {
@@ -152,10 +152,10 @@
     }
     
     .instructions {
-      background: rgba(0, 0, 0, 0.3);
+      background: rgba(0, 0, 0, 0.5);
       padding: 25px;
       border-radius: 15px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.1);
       margin-top: 20px;
@@ -185,11 +185,11 @@
       display: flex;
       align-items: center;
       margin-bottom: 15px;
-      color: #6dd5ed;
+      color: #cccccc;
     }
     
     .step h3 span {
-      background: #2193b0;
+      background: #666666;
       width: 30px;
       height: 30px;
       border-radius: 50%;
@@ -222,19 +222,19 @@
     }
     
     .ar-init-content {
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.9);
       padding: 40px;
       border-radius: 20px;
       text-align: center;
       max-width: 500px;
       border: 2px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
     }
     
     .ar-init-content h2 {
       font-size: 2rem;
       margin-bottom: 20px;
-      color: #6dd5ed;
+      color: #cccccc;
     }
     
     .ar-init-content p {
@@ -258,12 +258,12 @@
       content: "✓";
       position: absolute;
       left: 0;
-      color: #6dd5ed;
+      color: #cccccc;
       font-weight: bold;
     }
     
     .ar-init-button {
-      background: linear-gradient(45deg, #ff416c, #ff4b2b);
+      background: linear-gradient(45deg, #444444, #666666);
       color: white;
       border: none;
       padding: 15px 30px;
@@ -277,7 +277,7 @@
     
     .ar-init-button:hover {
       transform: translateY(-2px);
-      box-shadow: 0 10px 25px rgba(255, 65, 108, 0.3);
+      box-shadow: 0 10px 25px rgba(102, 102, 102, 0.3);
     }
     
     .ar-loading {
@@ -289,7 +289,7 @@
       width: 40px;
       height: 40px;
       border: 4px solid rgba(255, 255, 255, 0.1);
-      border-top: 4px solid #6dd5ed;
+      border-top: 4px solid #cccccc;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 0 auto 15px;
@@ -492,7 +492,7 @@
         side: THREE.DoubleSide
       });
       reticle = new THREE.Mesh(rectangleGeometry, rectangleMaterial);
-      reticle.rotation.x = -Math.PI / 2; // Rotate to lie flat
+      // Don't pre-rotate the reticle - let the hit test matrix handle orientation
       reticle.matrixAutoUpdate = false;
       reticle.visible = false;
       scene.add(reticle);
@@ -692,9 +692,9 @@
         distances.push(parseFloat(document.getElementById(`distance${i}`).value) / 100);
       }
 
-      const shelfMaterial = new THREE.MeshLambertMaterial({ color: 0x0066cc });
-      const columnMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
-      const boardMaterial = new THREE.MeshLambertMaterial({ color: 0xffcc66 });
+      const shelfMaterial = new THREE.MeshLambertMaterial({ color: 0x8a8a8a }); // Stainless steel frame
+      const columnMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 }); // Darker stainless steel for columns
+      const boardMaterial = new THREE.MeshLambertMaterial({ color: 0xb8b8b8 }); // Light stainless steel for boards
 
       const totalHeight = distances.reduce((acc, val) => acc + val, 0) + (height * shelves);
 
@@ -778,9 +778,9 @@
         distances.push(parseFloat(document.getElementById(`distance${i}`).value));
       }
 
-      const shelfMaterial = new THREE.MeshLambertMaterial({ color: 0x0066cc });
-      const columnMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
-      const boardMaterial = new THREE.MeshLambertMaterial({ color: 0xffcc66 });
+      const shelfMaterial = new THREE.MeshLambertMaterial({ color: 0x8a8a8a }); // Stainless steel frame
+      const columnMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 }); // Darker stainless steel for columns
+      const boardMaterial = new THREE.MeshLambertMaterial({ color: 0xb8b8b8 }); // Light stainless steel for boards
 
       const totalHeight = distances.reduce((acc, val) => acc + val, 0) + (height * shelves);
 
@@ -857,8 +857,13 @@
           reticle.visible = !placed;
           
           if (!placed) {
-            // Update reticle position and size
+            // Update reticle position and orientation
             reticle.matrix.fromArray(pose.transform.matrix);
+            
+            // Ensure the reticle is properly oriented to lie flat on the surface
+            // The pose matrix already contains the correct orientation from the hit test
+            // We just need to make sure our plane geometry is oriented correctly
+            reticle.rotation.set(0, 0, 0); // Reset rotation since matrix handles orientation
             
             // Scale the reticle to match shelf dimensions
             reticle.scale.set(currentShelfWidth, 1, currentShelfLength);
