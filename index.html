@@ -480,7 +480,11 @@
       scene.add(axesHelper);
 
       // Create a rectangular reticle instead of circular
-      const rectangleGeometry = new THREE.PlaneGeometry(1, 0.3);
+      // Get dimensions from input fields (convert cm to meters)
+      const width = parseFloat(document.getElementById('width').value) / 100;
+      const length = parseFloat(document.getElementById('length').value) / 100;
+      
+      const rectangleGeometry = new THREE.PlaneGeometry(width, length);
       const rectangleMaterial = new THREE.MeshBasicMaterial({ 
         color: 0x00ff00,
         transparent: true,
@@ -510,6 +514,10 @@
       arButton.addEventListener('click', showARInit);
       startArButton.addEventListener('click', startARInitialization);
       modeToggle.addEventListener('click', exitAR);
+
+      // Add event listeners for dimension changes
+      document.getElementById('width').addEventListener('input', updateReticleDimensions);
+      document.getElementById('length').addEventListener('input', updateReticleDimensions);
 
       // Check if WebXR is available
       if ('xr' in navigator) {
@@ -721,6 +729,21 @@
         shelvesGroup.add(boardMesh);
 
         if (i + 1 < shelves) currentY += height + distances[i + 1];
+      }
+    }
+
+    function updateReticleDimensions() {
+      if (reticle) {
+        const width = parseFloat(document.getElementById('width').value) / 100;
+        const length = parseFloat(document.getElementById('length').value) / 100;
+        
+        // Update the reticle geometry with new dimensions
+        reticle.geometry.dispose();
+        reticle.geometry = new THREE.PlaneGeometry(width, length);
+        
+        // Update current dimensions for AR placement
+        currentShelfWidth = width;
+        currentShelfLength = length;
       }
     }
 
