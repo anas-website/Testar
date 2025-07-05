@@ -6,6 +6,7 @@
   <title>3D Shelves Designer with AR</title>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js"></script>
   <style>
     * {
       margin: 0;
@@ -442,6 +443,7 @@
     let selectionRectangle;
     let currentShelfWidth = 1;
     let currentShelfLength = 0.3;
+    let controls;
 
     // Initialize the designer
     initDesigner();
@@ -462,14 +464,21 @@
       renderer.xr.enabled = true;
       document.querySelector('.viewer').appendChild(renderer.domElement);
 
-      // Lighting
-      const ambientLight = new THREE.AmbientLight(0x404040, 2);
+      // Lighting - improved to prevent flickering
+      const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
       scene.add(ambientLight);
       
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-      directionalLight.position.set(1, 1, 1);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(100, 100, 100);
       directionalLight.castShadow = true;
+      directionalLight.shadow.mapSize.width = 2048;
+      directionalLight.shadow.mapSize.height = 2048;
       scene.add(directionalLight);
+      
+      // Add additional fill light to reduce harsh shadows
+      const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+      fillLight.position.set(-100, 50, -100);
+      scene.add(fillLight);
       
       // Add a grid for reference (only in design mode)
       const gridHelper = new THREE.GridHelper(200, 20, 0x444444, 0x222222);
@@ -478,6 +487,15 @@
       // Add axes helper (only in design mode)
       const axesHelper = new THREE.AxesHelper(100);
       scene.add(axesHelper);
+
+      // Add orbit controls for stable 3D navigation
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.screenSpacePanning = false;
+      controls.minDistance = 50;
+      controls.maxDistance = 500;
+      controls.maxPolarAngle = Math.PI;
 
       // Create a rectangular reticle instead of circular
       // Get dimensions from input fields (convert cm to meters)
@@ -595,6 +613,11 @@
       modeToggle.style.display = 'block';
       arInfo.style.display = 'block';
       
+      // Disable orbit controls in AR mode
+      if (controls) {
+        controls.enabled = false;
+      }
+      
       // Clear design mode elements
       scene.background = null;
       scene.children.forEach(child => {
@@ -640,6 +663,11 @@
       camera.near = 0.1;
       camera.far = 1000;
       camera.updateProjectionMatrix();
+      
+      // Re-enable orbit controls in design mode
+      if (controls) {
+        controls.enabled = true;
+      }
       
       // Add back design mode helpers
       const gridHelper = new THREE.GridHelper(200, 20, 0x444444, 0x222222);
@@ -692,9 +720,31 @@
         distances.push(parseFloat(document.getElementById(`distance${i}`).value) / 100);
       }
 
-      const shelfMaterial = new THREE.MeshLambertMaterial({ color: 0x8a8a8a }); // Stainless steel frame
-      const columnMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 }); // Darker stainless steel for columns
-      const boardMaterial = new THREE.MeshLambertMaterial({ color: 0xb8b8b8 }); // Light stainless steel for boards
+      // Create materials with better properties to prevent flickering
+      const shelfMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x8a8a8a,
+        shininess: 30,
+        specular: 0x222222,
+        transparent: false,
+        depthTest: true,
+        depthWrite: true
+      }); // Stainless steel frame
+      const columnMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x666666,
+        shininess: 30,
+        specular: 0x222222,
+        transparent: false,
+        depthTest: true,
+        depthWrite: true
+      }); // Darker stainless steel for columns
+      const boardMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xb8b8b8,
+        shininess: 30,
+        specular: 0x222222,
+        transparent: false,
+        depthTest: true,
+        depthWrite: true
+      }); // Light stainless steel for boards
 
       const totalHeight = distances.reduce((acc, val) => acc + val, 0) + (height * shelves);
 
@@ -723,7 +773,8 @@
         const boardMesh = new THREE.Mesh(board, boardMaterial);
 
         frameMesh.position.y = currentY;
-        boardMesh.position.y = currentY + height / 4;
+        // Position the board slightly above the frame to prevent z-fighting
+        boardMesh.position.y = currentY + height / 2 + 0.001;
 
         shelvesGroup.add(frameMesh);
         shelvesGroup.add(boardMesh);
@@ -778,9 +829,31 @@
         distances.push(parseFloat(document.getElementById(`distance${i}`).value));
       }
 
-      const shelfMaterial = new THREE.MeshLambertMaterial({ color: 0x8a8a8a }); // Stainless steel frame
-      const columnMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 }); // Darker stainless steel for columns
-      const boardMaterial = new THREE.MeshLambertMaterial({ color: 0xb8b8b8 }); // Light stainless steel for boards
+      // Create materials with better properties to prevent flickering
+      const shelfMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x8a8a8a,
+        shininess: 30,
+        specular: 0x222222,
+        transparent: false,
+        depthTest: true,
+        depthWrite: true
+      }); // Stainless steel frame
+      const columnMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x666666,
+        shininess: 30,
+        specular: 0x222222,
+        transparent: false,
+        depthTest: true,
+        depthWrite: true
+      }); // Darker stainless steel for columns
+      const boardMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xb8b8b8,
+        shininess: 30,
+        specular: 0x222222,
+        transparent: false,
+        depthTest: true,
+        depthWrite: true
+      }); // Light stainless steel for boards
 
       const totalHeight = distances.reduce((acc, val) => acc + val, 0) + (height * shelves);
 
@@ -809,7 +882,8 @@
         const boardMesh = new THREE.Mesh(board, boardMaterial);
 
         frameMesh.position.y = currentY;
-        boardMesh.position.y = currentY + height / 4;
+        // Position the board slightly above the frame to prevent z-fighting
+        boardMesh.position.y = currentY + height / 2 + 0.1;
 
         scene.add(frameMesh);
         scene.add(boardMesh);
@@ -825,6 +899,8 @@
     function render(timestamp, frame) {
       if (isARMode && frame) {
         handleARFrame(frame);
+      } else if (controls) {
+        controls.update();
       }
 
       renderer.render(scene, camera);
@@ -863,7 +939,7 @@
             // Ensure the reticle is properly oriented to lie flat on the surface
             // The pose matrix already contains the correct orientation from the hit test
             // We just need to make sure our plane geometry is oriented correctly
-            reticle.rotation.set(0, 0, 0); // Reset rotation since matrix handles orientation
+            reticle.rotation.set(0, 0, 90); // Reset rotation since matrix handles orientation
             
             // Scale the reticle to match shelf dimensions
             reticle.scale.set(currentShelfWidth, 1, currentShelfLength);
