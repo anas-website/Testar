@@ -295,16 +295,14 @@
       margin: 0 auto 15px;
     }
     
-    .selection-ring {
+    .selection-rectangle {
       position: absolute;
-      width: 100px;
-      height: 100px;
-      border: 3px solid rgba(0, 255, 0, 0.7);
-      border-radius: 50%;
       pointer-events: none;
       display: none;
       z-index: 100;
       transform: translate(-50%, -50%);
+      border: 3px solid rgba(0, 255, 0, 0.7);
+      background-color: rgba(0, 255, 0, 0.2);
     }
     
     @keyframes spin {
@@ -382,7 +380,7 @@
         <div id="ar-info" style="position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; display: none;">
           Point your camera at a flat surface to place shelves
         </div>
-        <div class="selection-ring" id="selection-ring"></div>
+        <div class="selection-rectangle" id="selection-rectangle"></div>
       </div>
     </div>
     
@@ -401,12 +399,7 @@
         
         <div class="step">
           <h3><span>3</span> View in AR</h3>
-          <p>Click "View in AR" to place your shelves in your physical space. Move and rotate them with touch gestures.</p>
-        </div>
-        
-        <div class="step">
-          <h3><span>4</span> AR Controls</h3>
-          <p>In AR mode: Drag with one finger to move shelves. Use two fingers to rotate. Pinch to scale. Tap to place/select.</p>
+          <p>Click "View in AR" to place your shelves in your physical space. The shelves will be fixed in position once placed.</p>
         </div>
       </div>
     </div>
@@ -446,11 +439,9 @@
     let isARMode = false;
     let arButton, modeToggle, arInfo;
     let arInitOverlay, startArButton, arLoading;
-    let startTouches = [];
-    let selectionRing;
-    let lastTouchPosition = { x: 0, y: 0 };
-    let initialDistance = 0;
-    let initialAngle = null;
+    let selectionRectangle;
+    let currentShelfWidth = 1;
+    let currentShelfLength = 0.3;
 
     // Initialize the designer
     initDesigner();
@@ -488,10 +479,16 @@
       const axesHelper = new THREE.AxesHelper(100);
       scene.add(axesHelper);
 
-      // Reticle for AR placement
-      const ringGeometry = new THREE.RingGeometry(0.07, 0.09, 32).rotateX(-Math.PI / 2);
-      const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-      reticle = new THREE.Mesh(ringGeometry, ringMaterial);
+      // Create a rectangular reticle instead of circular
+      const rectangleGeometry = new THREE.PlaneGeometry(1, 0.3);
+      const rectangleMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x00ff00,
+        transparent: true,
+        opacity: 0.5,
+        side: THREE.DoubleSide
+      });
+      reticle = new THREE.Mesh(rectangleGeometry, rectangleMaterial);
+      reticle.rotation.x = -Math.PI / 2; // Rotate to lie flat
       reticle.matrixAutoUpdate = false;
       reticle.visible = false;
       scene.add(reticle);
@@ -508,7 +505,7 @@
       arInitOverlay = document.getElementById('ar-init-overlay');
       startArButton = document.getElementById('start-ar-button');
       arLoading = document.getElementById('ar-loading');
-      selectionRing = document.getElementById('selection-ring');
+      selectionRectangle = document.getElementById('selection-rectangle');
       
       arButton.addEventListener('click', showARInit);
       startArButton.addEventListener('click', startARInitialization);
@@ -529,139 +526,7 @@
         arButton.disabled = true;
       }
 
-      // Touch controls for AR
-      setupTouchControls();
-
       animate();
-    }
-
-    function setupTouchControls() {
-      const viewer = document.querySelector('.viewer');
-      
-      viewer.addEventListener('touchstart', (e) => {
-        if (!isARMode || !shelvesGroup) return;
-        
-        e.preventDefault();
-        startTouches = [...e.touches];
-        
-        if (e.touches.length === 1) {
-          // Single touch - select/move
-          const touch = e.touches[0];
-          lastTouchPosition = { x: touch.clientX, y: touch.clientY };
-          
-          // Check if we're selecting the shelves
-          const x = (touch.clientX / viewer.offsetWidth) * 2 - 1;
-          const y = -(touch.clientY / viewer.offsetHeight) * 2 + 1;
-          
-          const raycaster = new THREE.Raycaster();
-          raycaster.setFromCamera({ x, y }, camera);
-          
-          // Check if we hit the shelves
-          const intersects = raycaster.intersectObject(shelvesGroup, true);
-          if (intersects.length > 0) {
-            selected = true;
-            showSelectionRing(touch.clientX, touch.clientY);
-          }
-        } else if (e.touches.length === 2 && placed) {
-          // Two touches - rotate/scale
-          const touch1 = e.touches[0];
-          const touch2 = e.touches[1];
-          
-          initialDistance = Math.hypot(
-            touch1.clientX - touch2.clientX,
-            touch1.clientY - touch2.clientY
-          );
-          
-          initialAngle = Math.atan2(
-            touch2.clientY - touch1.clientY,
-            touch2.clientX - touch1.clientX
-          );
-          
-          selected = true;
-        }
-      });
-
-      viewer.addEventListener('touchmove', (e) => {
-        if (!isARMode || !selected || !shelvesGroup || !placed) return;
-        
-        e.preventDefault();
-        
-        if (e.touches.length === 1) {
-          // Move shelves
-          const touch = e.touches[0];
-          const deltaX = touch.clientX - lastTouchPosition.x;
-          const deltaY = touch.clientY - lastTouchPosition.y;
-          lastTouchPosition = { x: touch.clientX, y: touch.clientY };
-          
-          // Convert movement to world space (scaled down for better control)
-          const movementX = deltaX * 0.002;
-          const movementY = deltaY * 0.002;
-          
-          // Get camera directions
-          const direction = new THREE.Vector3();
-          camera.getWorldDirection(direction);
-          direction.y = 0; // Keep movement horizontal
-          direction.normalize();
-          
-          const right = new THREE.Vector3();
-          right.crossVectors(camera.up, direction).normalize();
-          
-          // Move in camera's right/forward directions (not up/down)
-          shelvesGroup.position.add(right.multiplyScalar(-movementX));
-          shelvesGroup.position.add(direction.multiplyScalar(movementY));
-          
-          // Update selection ring position
-          showSelectionRing(touch.clientX, touch.clientY);
-        } else if (e.touches.length === 2) {
-          // Rotate/scale shelves
-          const touch1 = e.touches[0];
-          const touch2 = e.touches[1];
-          
-          const currentDistance = Math.hypot(
-            touch1.clientX - touch2.clientX,
-            touch1.clientY - touch2.clientY
-          );
-          
-          if (initialDistance === 0) {
-            initialDistance = currentDistance;
-          }
-          
-          // Calculate scale
-          const scale = currentDistance / initialDistance;
-          shelvesGroup.scale.set(scale, scale, scale);
-          
-          // Calculate rotation
-          const angle = Math.atan2(
-            touch2.clientY - touch1.clientY,
-            touch2.clientX - touch1.clientX
-          );
-          
-          if (initialAngle === null) {
-            initialAngle = angle;
-          }
-          
-          const angleDelta = angle - initialAngle;
-          shelvesGroup.rotation.y += angleDelta;
-          initialAngle = angle;
-        }
-      });
-
-      viewer.addEventListener('touchend', (e) => {
-        if (!isARMode) return;
-        
-        if (e.touches.length === 0) {
-          selected = false;
-          initialDistance = 0;
-          initialAngle = null;
-          hideSelectionRing();
-        } else if (e.touches.length === 1) {
-          // Update last touch position if one finger remains
-          const touch = e.touches[0];
-          lastTouchPosition = { x: touch.clientX, y: touch.clientY };
-          initialDistance = 0;
-          initialAngle = null;
-        }
-      });
     }
 
     function onSelect() {
@@ -670,26 +535,29 @@
       if (!placed && reticle.visible) {
         // First placement
         placeShelvesInAR();
-      } else if (placed && !selected) {
-        // Select existing shelves
-        selected = true;
       }
     }
 
-    function showSelectionRing(x, y) {
-      if (!selectionRing) return;
+    function showSelectionRectangle(x, y, width, height) {
+      if (!selectionRectangle) return;
       
       const viewer = document.querySelector('.viewer');
       const rect = viewer.getBoundingClientRect();
       
-      selectionRing.style.left = `${x - rect.left}px`;
-      selectionRing.style.top = `${y - rect.top}px`;
-      selectionRing.style.display = 'block';
+      // Convert meters to pixels (approximate)
+      const widthPx = width * 1000;
+      const heightPx = height * 1000;
+      
+      selectionRectangle.style.width = `${widthPx}px`;
+      selectionRectangle.style.height = `${heightPx}px`;
+      selectionRectangle.style.left = `${x - rect.left}px`;
+      selectionRectangle.style.top = `${y - rect.top}px`;
+      selectionRectangle.style.display = 'block';
     }
 
-    function hideSelectionRing() {
-      if (selectionRing) {
-        selectionRing.style.display = 'none';
+    function hideSelectionRectangle() {
+      if (selectionRectangle) {
+        selectionRectangle.style.display = 'none';
       }
     }
 
@@ -752,7 +620,7 @@
       arButton.style.display = 'block';
       modeToggle.style.display = 'none';
       arInfo.style.display = 'none';
-      hideSelectionRing();
+      hideSelectionRectangle();
       
       // Reset initialization overlay state
       hideARInit();
@@ -792,7 +660,9 @@
       shelvesGroup.visible = true;
       scene.add(shelvesGroup);
       placed = true;
-      selected = true;
+      
+      // Hide reticle after placement
+      reticle.visible = false;
     }
 
     function createShelvesForAR() {
@@ -805,6 +675,10 @@
       const height = parseFloat(document.getElementById('height').value) / 100;
       const shelves = parseInt(document.getElementById('shelves').value);
       
+      // Store current dimensions for reticle
+      currentShelfWidth = width;
+      currentShelfLength = length;
+
       const distances = [];
       for (let i = 0; i < shelves; i++) {
         distances.push(parseFloat(document.getElementById(`distance${i}`).value) / 100);
@@ -958,11 +832,30 @@
           const hit = hitResults[0];
           const pose = hit.getPose(referenceSpace);
           reticle.visible = !placed;
+          
           if (!placed) {
+            // Update reticle position and size
             reticle.matrix.fromArray(pose.transform.matrix);
+            
+            // Scale the reticle to match shelf dimensions
+            reticle.scale.set(currentShelfWidth, 1, currentShelfLength);
+            
+            // Update the selection rectangle visualization
+            const position = new THREE.Vector3();
+            position.setFromMatrixPosition(reticle.matrix);
+            
+            // Project the position to screen coordinates
+            const vector = position.clone().project(camera);
+            vector.x = (vector.x + 1) / 2 * document.querySelector('.viewer').offsetWidth;
+            vector.y = -(vector.y - 1) / 2 * document.querySelector('.viewer').offsetHeight;
+            
+            showSelectionRectangle(vector.x, vector.y, currentShelfWidth, currentShelfLength);
+          } else {
+            hideSelectionRectangle();
           }
         } else {
           reticle.visible = false;
+          hideSelectionRectangle();
         }
       }
     }
