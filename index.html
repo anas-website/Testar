@@ -295,6 +295,18 @@
       margin: 0 auto 15px;
     }
     
+    .selection-ring {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      border: 3px solid rgba(0, 255, 0, 0.7);
+      border-radius: 50%;
+      pointer-events: none;
+      display: none;
+      z-index: 100;
+      transform: translate(-50%, -50%);
+    }
+    
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -370,6 +382,7 @@
         <div id="ar-info" style="position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); color: white; padding: 10px; border-radius: 5px; display: none;">
           Point your camera at a flat surface to place shelves
         </div>
+        <div class="selection-ring" id="selection-ring"></div>
       </div>
     </div>
     
@@ -434,6 +447,10 @@
     let arButton, modeToggle, arInfo;
     let arInitOverlay, startArButton, arLoading;
     let startTouches = [];
+    let selectionRing;
+    let lastTouchPosition = { x: 0, y: 0 };
+    let initialDistance = 0;
+    let initialAngle = 0;
 
     // Initialize the designer
     initDesigner();
@@ -481,11 +498,7 @@
 
       // AR controller
       controller = renderer.xr.getController(0);
-      controller.addEventListener('select', () => {
-        if (!placed && reticle.visible && isARMode) {
-          placeShelvesInAR();
-        }
-      });
+      controller.addEventListener('select', onSelect);
       scene.add(controller);
 
       // AR button setup
@@ -495,21 +508,11 @@
       arInitOverlay = document.getElementById('ar-init-overlay');
       startArButton = document.getElementById('start-ar-button');
       arLoading = document.getElementById('ar-loading');
+      selectionRing = document.getElementById('selection-ring');
       
-      arButton.addEventListener('click', () => {
-        showARInit();
-      });
-      
-      startArButton.addEventListener('click', () => {
-        startARInitialization();
-      });
-      
-      modeToggle.addEventListener('click', () => {
-        if (renderer.xr.isPresenting) {
-          renderer.xr.getSession().end();
-        }
-        exitAR();
-      });
+      arButton.addEventListener('click', showARInit);
+      startArButton.addEventListener('click', startARInitialization);
+      modeToggle.addEventListener('click', exitAR);
 
       // Check if WebXR is available
       if ('xr' in navigator) {
@@ -527,52 +530,137 @@
       }
 
       // Touch controls for AR
-      window.addEventListener('touchstart', (e) => {
+      setupTouchControls();
+
+      animate();
+    }
+
+    function setupTouchControls() {
+      const viewer = document.querySelector('.viewer');
+      
+      viewer.addEventListener('touchstart', (e) => {
+        if (!isARMode || !shelvesGroup) return;
+        
+        e.preventDefault();
         startTouches = [...e.touches];
-        if (e.touches.length === 1 && shelvesGroup && isARMode) {
+        
+        if (e.touches.length === 1) {
+          // Single touch - select/move
+          const touch = e.touches[0];
+          lastTouchPosition = { x: touch.clientX, y: touch.clientY };
+          
+          // Check if we're selecting the shelves
+          const x = (touch.clientX / viewer.offsetWidth) * 2 - 1;
+          const y = -(touch.clientY / viewer.offsetHeight) * 2 + 1;
+          
+          const raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera({ x, y }, camera);
+          
+          // Check if we hit the shelves
+          const intersects = raycaster.intersectObject(shelvesGroup, true);
+          if (intersects.length > 0) {
+            selected = true;
+            showSelectionRing(touch.clientX, touch.clientY);
+          }
+        } else if (e.touches.length === 2 && placed) {
+          // Two touches - rotate
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          initialDistance = Math.sqrt(dx * dx + dy * dy);
+          initialAngle = Math.atan2(dy, dx);
           selected = true;
         }
       });
 
-      window.addEventListener('touchmove', (e) => {
-        if (!selected || !shelvesGroup || !isARMode) return;
-
+      viewer.addEventListener('touchmove', (e) => {
+        if (!isARMode || !selected || !shelvesGroup) return;
+        
+        e.preventDefault();
+        
         if (e.touches.length === 1) {
-          // Get the touch position
+          // Move shelves
           const touch = e.touches[0];
+          const deltaX = touch.clientX - lastTouchPosition.x;
+          const deltaY = touch.clientY - lastTouchPosition.y;
+          lastTouchPosition = { x: touch.clientX, y: touch.clientY };
           
-          // Convert touch coordinates to normalized device coordinates (-1 to +1)
-          const x = (touch.clientX / window.innerWidth) * 2 - 1;
-          const y = -(touch.clientY / window.innerHeight) * 2 + 1;
+          // Convert movement to world space
+          const movementX = deltaX * 0.01;
+          const movementY = deltaY * 0.01;
           
-          // Create a ray from the camera through the touch point
-          const raycaster = new THREE.Raycaster();
-          raycaster.setFromCamera({ x, y }, camera);
+          // Move in camera's right/up directions
+          const right = new THREE.Vector3();
+          const up = new THREE.Vector3();
+          camera.getWorldDirection(right);
+          right.cross(camera.up);
+          up.copy(camera.up);
           
-          // Find intersection with a horizontal plane at the shelves' current height
-          const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -shelvesGroup.position.y);
-          const intersectionPoint = new THREE.Vector3();
+          shelvesGroup.position.add(right.multiplyScalar(-movementX));
+          shelvesGroup.position.add(up.multiplyScalar(movementY));
           
-          if (raycaster.ray.intersectPlane(plane, intersectionPoint)) {
-            shelvesGroup.position.x = intersectionPoint.x;
-            shelvesGroup.position.z = intersectionPoint.z;
-          }
-        }
-
-        if (e.touches.length === 2) {
+          // Update selection ring position
+          showSelectionRing(touch.clientX, touch.clientY);
+        } else if (e.touches.length === 2) {
+          // Rotate shelves
           const dx = e.touches[0].clientX - e.touches[1].clientX;
           const dy = e.touches[0].clientY - e.touches[1].clientY;
-          const angle = Math.atan2(dy, dx);
-          shelvesGroup.rotation.y = angle;
+          const currentDistance = Math.sqrt(dx * dx + dy * dy);
+          const currentAngle = Math.atan2(dy, dx);
+          
+          // Calculate rotation
+          const angleDelta = currentAngle - initialAngle;
+          shelvesGroup.rotation.y += angleDelta;
+          
+          // Calculate scale
+          const scaleDelta = currentDistance / initialDistance;
+          shelvesGroup.scale.set(scaleDelta, scaleDelta, scaleDelta);
+          
+          initialAngle = currentAngle;
+          initialDistance = currentDistance;
         }
       });
 
-      window.addEventListener('touchend', () => {
-        selected = false;
-        startTouches = [];
+      viewer.addEventListener('touchend', (e) => {
+        if (!isARMode) return;
+        
+        if (e.touches.length === 0) {
+          selected = false;
+          hideSelectionRing();
+        } else if (e.touches.length === 1) {
+          // Update last touch position if one finger remains
+          const touch = e.touches[0];
+          lastTouchPosition = { x: touch.clientX, y: touch.clientY };
+        }
       });
+    }
 
-      animate();
+    function onSelect() {
+      if (!isARMode) return;
+      
+      if (!placed && reticle.visible) {
+        // First placement
+        placeShelvesInAR();
+      } else if (placed && !selected) {
+        // Select existing shelves
+        selected = true;
+      }
+    }
+
+    function showSelectionRing(x, y) {
+      if (!selectionRing) return;
+      
+      const viewer = document.querySelector('.viewer');
+      const rect = viewer.getBoundingClientRect();
+      
+      selectionRing.style.left = `${x - rect.left}px`;
+      selectionRing.style.top = `${y - rect.top}px`;
+      selectionRing.style.display = 'block';
+    }
+
+    function hideSelectionRing() {
+      if (selectionRing) {
+        selectionRing.style.display = 'none';
+      }
     }
 
     function showARInit() {
@@ -634,6 +722,7 @@
       arButton.style.display = 'block';
       modeToggle.style.display = 'none';
       arInfo.style.display = 'none';
+      hideSelectionRing();
       
       // Reset initialization overlay state
       hideARInit();
@@ -661,6 +750,7 @@
       
       reticle.visible = false;
       placed = false;
+      selected = false;
     }
 
     function placeShelvesInAR() {
@@ -669,6 +759,7 @@
       }
       
       shelvesGroup.position.setFromMatrixPosition(reticle.matrix);
+      shelvesGroup.visible = true;
       scene.add(shelvesGroup);
       placed = true;
       selected = true;
@@ -677,6 +768,7 @@
     function createShelvesForAR() {
       // Create a new group for the shelves in AR
       shelvesGroup = new THREE.Group();
+      shelvesGroup.visible = false;
       
       const width = parseFloat(document.getElementById('width').value) / 100;
       const length = parseFloat(document.getElementById('length').value) / 100;
@@ -805,40 +897,44 @@
 
     function render(timestamp, frame) {
       if (isARMode && frame) {
-        const referenceSpace = renderer.xr.getReferenceSpace();
-        const session = renderer.xr.getSession();
-
-        if (!hitTestSourceRequested) {
-          session.requestReferenceSpace('viewer').then((viewerRef) => {
-            session.requestHitTestSource({ space: viewerRef }).then((source) => {
-              hitTestSource = source;
-            });
-          });
-
-          session.addEventListener('end', () => {
-            hitTestSourceRequested = false;
-            hitTestSource = null;
-          });
-
-          hitTestSourceRequested = true;
-        }
-
-        if (hitTestSource) {
-          const hitResults = frame.getHitTestResults(hitTestSource);
-          if (hitResults.length > 0) {
-            const hit = hitResults[0];
-            const pose = hit.getPose(referenceSpace);
-            reticle.visible = !placed;
-            if (!placed) {
-              reticle.matrix.fromArray(pose.transform.matrix);
-            }
-          } else {
-            reticle.visible = false;
-          }
-        }
+        handleARFrame(frame);
       }
 
       renderer.render(scene, camera);
+    }
+
+    function handleARFrame(frame) {
+      const referenceSpace = renderer.xr.getReferenceSpace();
+      const session = renderer.xr.getSession();
+
+      if (!hitTestSourceRequested) {
+        session.requestReferenceSpace('viewer').then((viewerRef) => {
+          session.requestHitTestSource({ space: viewerRef }).then((source) => {
+            hitTestSource = source;
+          });
+        });
+
+        session.addEventListener('end', () => {
+          hitTestSourceRequested = false;
+          hitTestSource = null;
+        });
+
+        hitTestSourceRequested = true;
+      }
+
+      if (hitTestSource) {
+        const hitResults = frame.getHitTestResults(hitTestSource);
+        if (hitResults.length > 0) {
+          const hit = hitResults[0];
+          const pose = hit.getPose(referenceSpace);
+          reticle.visible = !placed;
+          if (!placed) {
+            reticle.matrix.fromArray(pose.transform.matrix);
+          }
+        } else {
+          reticle.visible = false;
+        }
+      }
     }
 
     // Handle window resize
