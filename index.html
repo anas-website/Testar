@@ -234,6 +234,8 @@
       cursor: pointer;
       transition: all 0.3s ease;
       display: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
     
     .fullscreen-toggle:hover {
@@ -264,6 +266,12 @@
       .fullscreen-toggle {
         padding: 15px 20px;
         font-size: 1rem;
+        min-height: 44px;
+        min-width: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
       }
       
       #fullscreen-help {
@@ -461,12 +469,12 @@
       <div class="steps">
         <div class="step">
           <h3><span>1</span> Design Your Shelves</h3>
-          <p>Adjust the parameters to design your custom shelves. Set the number of shelves, dimensions, and spacing between each shelf.</p>
+          <p>Adjust the parameters to design your custom shelves. Set the number of shelves, dimensions, and spacing between each shelf. The 3D preview updates automatically as you change values.</p>
         </div>
         
         <div class="step">
           <h3><span>2</span> Preview in 3D</h3>
-          <p>Click "Generate 3D Shelves" to see your design in the 3D viewer. Rotate the view by dragging with your mouse.</p>
+          <p>Click "Generate 3D Shelves" to see your design in fullscreen 3D viewer. Use mouse/touch to rotate and zoom the view.</p>
         </div>
         
         <div class="step">
@@ -600,6 +608,7 @@
       startArButton.addEventListener('click', startARInitialization);
       modeToggle.addEventListener('click', exitAR);
       fullscreenToggle.addEventListener('click', exitFullscreen);
+      fullscreenToggle.addEventListener('touchend', exitFullscreen);
 
       // Add event listeners for dimension changes
       document.getElementById('width').addEventListener('input', updateReticleDimensions);
@@ -774,6 +783,9 @@
       
       // Show help text briefly
       showFullscreenHelp();
+      
+      // Add mobile exit button if on mobile
+      addMobileExitButton();
     }
 
     function exitFullscreen() {
@@ -799,6 +811,12 @@
       
       // Reset camera position
       resetCamera();
+      
+      // Remove mobile exit button
+      const mobileExitBtn = document.getElementById('mobile-exit-btn');
+      if (mobileExitBtn) {
+        mobileExitBtn.remove();
+      }
     }
 
     function addMouseControls() {
@@ -1318,8 +1336,46 @@
       }
     });
 
-    // Initial shelves creation
-    createShelves();
+    // Handle mobile back button and other exit methods
+    window.addEventListener('popstate', () => {
+      if (isFullscreen) {
+        exitFullscreen();
+      }
+    });
+
+    // Add a mobile-friendly exit button that appears on touch
+    function addMobileExitButton() {
+      if (window.innerWidth <= 768 && isFullscreen) {
+        const mobileExitBtn = document.createElement('div');
+        mobileExitBtn.id = 'mobile-exit-btn';
+        mobileExitBtn.innerHTML = '✕';
+        mobileExitBtn.style.cssText = `
+          position: fixed;
+          top: 10px;
+          right: 10px;
+          width: 50px;
+          height: 50px;
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 24px;
+          font-weight: bold;
+          z-index: 1001;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
+        `;
+        mobileExitBtn.addEventListener('click', exitFullscreen);
+        mobileExitBtn.addEventListener('touchend', exitFullscreen);
+        document.body.appendChild(mobileExitBtn);
+      }
+    }
+
+    // Initial shelves creation - removed to make form the home page
+    // createShelves();
   </script>
 </body>
 </html>
